@@ -1,6 +1,11 @@
 package ollama
 
-import "time"
+import (
+	"fmt"
+	"strconv"
+	"strings"
+	"time"
+)
 
 // GenerateRequest represents a request to generate a completion
 type GenerateRequest struct {
@@ -16,9 +21,9 @@ type GenerateRequest struct {
 	System   string                 `json:"system,omitempty"`
 	Template string                 `json:"template,omitempty"`
 
-	Stream    bool          `json:"stream,omitempty"`
-	Raw       bool          `json:"raw,omitempty"`
-	KeepAlive time.Duration `json:"keep_alive,omitempty"`
+	Stream    bool     `json:"stream,omitempty"`
+	Raw       bool     `json:"raw,omitempty"`
+	KeepAlive Duration `json:"keep_alive,omitempty"`
 
 	// Deprecated
 	Context []int `json:"context,omitempty"`
@@ -63,7 +68,7 @@ type ChatRequest struct {
 	Format    interface{}            `json:"format,omitempty"`
 	Stream    bool                   `json:"stream,omitempty"`
 	Options   map[string]interface{} `json:"options,omitempty"`
-	KeepAlive time.Duration          `json:"keep_alive,omitempty"`
+	KeepAlive Duration               `json:"keep_alive"`
 }
 
 type Tool struct {
@@ -154,4 +159,88 @@ type EmbeddingResponse struct {
 // ModelResponse represents a response containing model status
 type ModelResponse struct {
 	Status string `json:"status"`
+}
+
+// Duration is a wrapper around time.Duration
+type Duration time.Duration
+
+const (
+	SecsPerMin  = 60.0
+	SecsPerHour = 3600.0
+	SecsPerDay  = 86400.0
+)
+
+// MarshalJSON implements the json.Marshaler interface
+func (d Duration) MarshalJSON() ([]byte, error) {
+	durSecs := int64(time.Duration(d).Seconds())
+	if durSecs == 0 {
+		return []byte(`""`), nil
+	}
+
+	var parts []string
+
+	if days := durSecs / SecsPerDay; days > 0 {
+		parts = append(parts, fmt.Sprintf("%dd", days))
+		durSecs %= SecsPerDay
+	}
+
+	if hours := durSecs / SecsPerHour; hours > 0 {
+		parts = append(parts, fmt.Sprintf("%dh", hours))
+		durSecs %= SecsPerHour
+	}
+
+	if mins := durSecs / SecsPerMin; mins > 0 {
+		parts = append(parts, fmt.Sprintf("%dm", mins))
+		durSecs %= SecsPerMin
+	}
+
+	if durSecs > 0 {
+		parts = append(parts, fmt.Sprintf("%ds", durSecs))
+	}
+
+	return []byte(fmt.Sprintf(`"%s"`, strings.Join(parts, ""))), nil
+}
+
+func (d *Duration) UnmarshalJSON(b []byte) error {
+	s := strings.Trim(string(b), `"`)
+	if s == "" {
+		*d = Duration(0)
+		return nil
+	}
+
+	var total time.Duration
+	current := ""
+
+	for i := 0; i < len(s); i++ {
+		if s[i] >= '0' && s[i] <= '9' {
+			current += string(s[i])
+			continue
+		}
+
+		value, err := strconv.ParseInt(current, 10, 64)
+		if err != nil {
+			return err
+		}
+
+		switch s[i] {
+		case 's':
+			total += time.Duration(value) * time.Second
+		case 'm':
+			total += time.Duration(value) * time.Minute
+		case 'h':
+			total += time.Duration(value) * time.Hour
+		case 'd':
+			total += time.Duration(value) * 24 * time.Hour
+		default:
+			return fmt.Errorf("invalid duration unit: %c", s[i])
+		}
+
+		current = ""
+	}
+	if current != "" {
+		return fmt.Errorf("invalid duration format: %s", s)
+	}
+
+	*d = Duration(total)
+	return nil
 }

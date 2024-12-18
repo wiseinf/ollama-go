@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"time"
 
 	ollama "github.com/wiseinf/ollama-go"
 )
@@ -86,6 +87,7 @@ func main() {
 				Content: "Hello world",
 			},
 		},
+		KeepAlive: ollama.Duration(5 * time.Minute),
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -93,8 +95,9 @@ func main() {
 	fmt.Printf("Chat response: %+v\n", resp)
 
 	generateRes, err := client.Generate(ctx, &ollama.GenerateRequest{
-		Model:  "llama3.2:1b",
-		Prompt: "Hello world",
+		Model:     "llama3.2:1b",
+		Prompt:    "Hello world",
+		KeepAlive: ollama.Duration(5 * time.Minute),
 	})
 	if err != nil {
 		log.Fatal(err)
