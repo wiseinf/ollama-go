@@ -84,7 +84,7 @@ func (c *Client) sendRequest(ctx context.Context, method, path string, body inte
 			c.logger.Error("Request failed: %v", err)
 			continue
 		}
-
+		c.logger.Debug("Receiving response: %s %s", method, path)
 		if resp.StatusCode == http.StatusTooManyRequests ||
 			(resp.StatusCode >= 500 && resp.StatusCode < 600) {
 			resp.Body.Close()

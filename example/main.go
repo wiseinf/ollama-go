@@ -84,7 +84,7 @@ func main() {
 		Messages: []ollama.ChatMessage{
 			{
 				Role:    "user",
-				Content: "Hello world",
+				Content: "why is the sky blue?",
 			},
 		},
 		KeepAlive: ollama.Duration(5 * time.Minute),
@@ -112,4 +112,39 @@ func main() {
 	if _, err := client.ShowModel(ctx, "llama3.2:1b-copy", nil); err == nil {
 		log.Fatal("model still exists after deletion")
 	}
+
+	// Stream chat
+	req := &ollama.ChatRequest{
+		Model: "llama3.2:1b",
+		Messages: []ollama.ChatMessage{
+			{
+				Role:    "user",
+				Content: "why is the sky blue?",
+			},
+		},
+	}
+
+	stream, err := client.ChatStream(ctx, req)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for resp := range stream {
+		fmt.Print(resp.Message.Content)
+	}
+
+	generateStream, err := client.GenerateStream(ctx, &ollama.GenerateRequest{
+		Model:     "llama3.2:1b",
+		Prompt:    "Hello world",
+		KeepAlive: ollama.Duration(5 * time.Minute),
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("Generate stream response:")
+	for resp := range generateStream {
+		fmt.Print(resp.Response)
+	}
+
+	fmt.Printf("Finished.")
 }

@@ -3,11 +3,13 @@ package ollama
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 )
 
 // Generate sends a generation request to the Ollama API
 func (c *Client) Generate(ctx context.Context, req *GenerateRequest) (*GenerateResponse, error) {
+	req.Stream = false
 	resp, err := c.sendRequest(ctx, "POST", "/api/generate", req)
 	if err != nil {
 		return nil, err
@@ -141,13 +143,18 @@ func (c *Client) CopyModel(ctx context.Context, req *CopyModelRequest) error {
 	return nil
 }
 
-// DeleteModel deletes a model
+// DeleteModel deletes a model from the Ollama server
 func (c *Client) DeleteModel(ctx context.Context, name string) error {
-	resp, err := c.sendRequest(ctx, "DELETE", "/api/delete?name="+name, nil)
-	if err != nil {
-		return err
+	reqBody := struct {
+		Model string `json:"model"`
+	}{
+		Model: name,
 	}
-	defer resp.Body.Close()
+
+	_, err := c.sendRequest(ctx, "DELETE", "/api/delete", reqBody)
+	if err != nil {
+		return fmt.Errorf("failed to delete model: %w", err)
+	}
 
 	return nil
 }
@@ -242,4 +249,33 @@ func (c *Client) ListRunningModels(ctx context.Context) ([]ModelInfo, error) {
 	}
 
 	return result.Models, nil
+}
+
+// ChatStream sends a streaming chat request to the Ollama API
+func (c *Client) ChatStream(ctx context.Context, req *ChatRequest) (<-chan ChatResponse, error) {
+	req.Stream = true
+	resp, err := c.sendRequest(ctx, "POST", "/api/chat", req)
+	if err != nil {
+		return nil, err
+	}
+
+	ch := make(chan ChatResponse)
+	go func() {
+		defer resp.Body.Close()
+		defer close(ch)
+
+		decoder := json.NewDecoder(resp.Body)
+		for {
+			var response ChatResponse
+			if err := decoder.Decode(&response); err != nil {
+				if err != io.EOF {
+					// Handle error
+				}
+				return
+			}
+			ch <- response
+		}
+	}()
+
+	return ch, nil
 }

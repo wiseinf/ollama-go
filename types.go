@@ -20,8 +20,8 @@ type GenerateRequest struct {
 	Options  map[string]interface{} `json:"options,omitempty"`
 	System   string                 `json:"system,omitempty"`
 	Template string                 `json:"template,omitempty"`
-
-	Stream    bool     `json:"stream,omitempty"`
+	// Stream controlled by the client.
+	Stream    bool     `json:"stream"`
 	Raw       bool     `json:"raw,omitempty"`
 	KeepAlive Duration `json:"keep_alive,omitempty"`
 
@@ -44,9 +44,18 @@ type GenerateResponse struct {
 	EvalDuration       int64     `json:"eval_duration"`
 }
 
+type Role string
+
+const (
+	SystemRole    Role = "system"
+	UserRole      Role = "user"
+	AssistantRole Role = "assistant"
+	ToolRole      Role = "tool"
+)
+
 // ChatMessage represents a chat message
 type ChatMessage struct {
-	Role      string     `json:"role"`
+	Role      Role       `json:"role"`
 	Content   string     `json:"content"`
 	Images    []string   `json:"images,omitempty"`
 	ToolCalls []ToolCall `json:"tool_calls,omitempty"`
@@ -65,10 +74,11 @@ type ChatRequest struct {
 	Messages []ChatMessage `json:"messages"`
 	Tools    []Tool        `json:"tools,omitempty"`
 	// Advanced parameters (optional)
-	Format    interface{}            `json:"format,omitempty"`
-	Stream    bool                   `json:"stream,omitempty"`
+	Format interface{} `json:"format,omitempty"`
+	// Stream controlled by the client.
+	Stream    bool                   `json:"stream"`
 	Options   map[string]interface{} `json:"options,omitempty"`
-	KeepAlive Duration               `json:"keep_alive"`
+	KeepAlive Duration               `json:"keep_alive,omitempty"`
 }
 
 type Tool struct {
