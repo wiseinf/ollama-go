@@ -1,6 +1,6 @@
 # Ollama Go Library
 
-The Ollama Go library provides the easiest way to integrate your JavaScript project with [Ollama](https://github.com/ollama/ollama).
+The Ollama Go library provides the easiest way to integrate your Go project with [Ollama](https://github.com/ollama/ollama).
 
 ## Usage
 
