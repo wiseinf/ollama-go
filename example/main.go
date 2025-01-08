@@ -124,33 +124,33 @@ func main() {
 		},
 	}
 
-	stream, errCh := client.ChatStream(ctx, req)
-	select {
-	case resp, ok := <-stream:
-		if !ok {
-			log.Fatal("stream closed unexpectedly")
+	stream, err := client.ChatStream(ctx, req)
+
+	if err != nil {
+		log.Fatalf("chat stream error: %v", err)
+	}
+	for item := range stream {
+		if item.Error != nil {
+			fmt.Printf("Chat stream response: %+v\n", item.Error)
 		} else {
-			fmt.Printf("Chat stream response: %+v\n", resp)
+			fmt.Printf("Chat stream response: %+v\n", item.ChatResponse)
 		}
-	case err := <-errCh:
-		log.Fatal(err)
 	}
 
-	generateStream, errCh := client.GenerateStream(ctx, &ollama.GenerateRequest{
+	generateStream, err := client.GenerateStream(ctx, &ollama.GenerateRequest{
 		Model:     "llama3.2:1b",
 		Prompt:    "Hello world",
 		KeepAlive: ollama.Duration(5 * time.Minute),
 	})
-
-	select {
-	case resp, ok := <-generateStream:
-		if !ok {
-			log.Fatal("stream closed unexpectedly")
+	if err != nil {
+		log.Fatalf("generate stream error: %v", err)
+	}
+	for item := range generateStream {
+		if item.Error != nil {
+			fmt.Printf("Generate stream response: %+v\n", item.Error)
 		} else {
-			fmt.Printf("generate stream response: %+v\n", resp)
+			fmt.Printf("Generate stream response: %+v\n", item.GenerateResponse)
 		}
-	case err := <-errCh:
-		log.Fatal(err)
 	}
 
 	fmt.Printf("Finished.")

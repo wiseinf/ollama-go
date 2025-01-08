@@ -101,7 +101,9 @@ func TestGenerateStream(t *testing.T) {
 
 	var received []GenerateResponse
 	for response := range stream {
-		received = append(received, response)
+		if response.Error != nil {
+			received = append(received, *response.GenerateResponse)
+		}
 	}
 
 	if !reflect.DeepEqual(received, responses) {

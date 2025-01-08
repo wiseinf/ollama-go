@@ -44,6 +44,12 @@ type GenerateResponse struct {
 	EvalDuration       int64     `json:"eval_duration"`
 }
 
+// GenerateStreamResponse represents a response from the generate endpoint using stream mode
+type GenerateStreamResponse struct {
+	GenerateResponse *GenerateResponse
+	Error            error
+}
+
 type Role string
 
 const (
@@ -112,6 +118,12 @@ type ChatResponse struct {
 	PromptEvalDuration int64       `json:"prompt_eval_duration"`
 	EvalCount          int         `json:"eval_count"`
 	EvalDuration       int64       `json:"eval_duration"`
+}
+
+// ChatStreamResponse represents a response from the chat endpoint using stream mode
+type ChatStreamResponse struct {
+	ChatResponse *ChatResponse
+	Error        error
 }
 
 // ModelInfo represents information about a model

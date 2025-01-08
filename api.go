@@ -25,39 +25,37 @@ func (c *Client) Generate(ctx context.Context, req *GenerateRequest) (*GenerateR
 }
 
 // GenerateStream sends a streaming generation request to the Ollama API
-func (c *Client) GenerateStream(ctx context.Context, req *GenerateRequest) (<-chan GenerateResponse, <-chan error) {
+func (c *Client) GenerateStream(ctx context.Context, req *GenerateRequest) (<-chan GenerateStreamResponse, error) {
 	req.Stream = true
 
 	resp, err := c.sendRequest(ctx, "POST", "/api/generate", req)
 	if err != nil {
-		errCh := make(chan error)
-		errCh <- err
-		defer close(errCh)
-		return nil, errCh
+		return nil, err
 	}
 
-	ch := make(chan GenerateResponse)
-	errCh := make(chan error)
+	ch := make(chan GenerateStreamResponse)
 	go func() {
-		defer resp.Body.Close()
 		defer close(ch)
-		defer close(errCh)
+		defer resp.Body.Close()
 
 		decoder := json.NewDecoder(resp.Body)
 		for {
 			var response GenerateResponse
 			if err := decoder.Decode(&response); err != nil {
 				if err != io.EOF {
-					// Handle error
-					errCh <- err
+					ch <- GenerateStreamResponse{
+						Error: err,
+					}
 				}
 				return
 			}
-			ch <- response
+			ch <- GenerateStreamResponse{
+				GenerateResponse: &response,
+			}
 		}
 	}()
 
-	return ch, errCh
+	return ch, nil
 }
 
 // Chat sends a chat request to the Ollama API
@@ -259,33 +257,31 @@ func (c *Client) ListRunningModels(ctx context.Context) ([]ModelInfo, error) {
 }
 
 // ChatStream sends a streaming chat request to the Ollama API
-func (c *Client) ChatStream(ctx context.Context, req *ChatRequest) (<-chan ChatResponse, <-chan error) {
+func (c *Client) ChatStream(ctx context.Context, req *ChatRequest) (<-chan ChatStreamResponse, error) {
 	req.Stream = true
 	resp, err := c.sendRequest(ctx, "POST", "/api/chat", req)
 	if err != nil {
-		errCh := make(chan error)
-		errCh <- err
-		defer close(errCh)
-		return nil, errCh
+		return nil, err
 	}
 
-	ch := make(chan ChatResponse)
-	errCh := make(chan error)
+	ch := make(chan ChatStreamResponse)
 	go func() {
 		defer resp.Body.Close()
 		defer close(ch)
-		defer close(errCh)
 		decoder := json.NewDecoder(resp.Body)
 		for {
 			var response ChatResponse
 			if err := decoder.Decode(&response); err != nil {
 				if err != io.EOF {
-					// Handle error
-					errCh <- err
+					ch <- ChatStreamResponse{
+						Error: err,
+					}
 				}
 				return
 			}
-			ch <- response
+			ch <- ChatStreamResponse{
+				ChatResponse: &response,
+			}
 		}
 	}()
 
